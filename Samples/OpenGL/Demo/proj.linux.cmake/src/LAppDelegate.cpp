@@ -50,7 +50,7 @@ bool LAppDelegate::Initialize()
 {
     if (DebugLogEnable)
     {
-        LAppPal::PrintLogLn("START");
+        LAppPal::PrintLogLn("START1");
     }
 
     // GLFWの初期化
@@ -62,6 +62,10 @@ bool LAppDelegate::Initialize()
         }
         return GL_FALSE;
     }
+    LAppPal::PrintLogLn("setting hint");
+    glfwWindowHint(GLFW_CLIENT_API, GLFW_OPENGL_ES_API);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 1);
 
     // Windowの生成_
     _window = glfwCreateWindow(RenderTargetWidth, RenderTargetHeight, "SAMPLE", NULL, NULL);

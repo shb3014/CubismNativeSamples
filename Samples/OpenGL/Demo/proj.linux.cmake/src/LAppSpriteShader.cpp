@@ -34,6 +34,7 @@ GLuint LAppSpriteShader::CreateShader()
     Csm::csmString fragShaderFile(LAppDefine::ShaderPath);
     fragShaderFile += LAppDefine::FragShaderName;
 
+    CubismLogError("Creating shader from: %s | %s", vertShaderFile.GetRawString(), fragShaderFile.GetRawString());
     // シェーダーのコンパイル
     GLuint vertexShaderId = CompileShader(vertShaderFile, GL_VERTEX_SHADER);
     GLuint fragmentShaderId = CompileShader(fragShaderFile, GL_FRAGMENT_SHADER);
@@ -69,7 +70,7 @@ bool LAppSpriteShader::CheckShader(GLuint shaderId)
     {
         GLchar* log = reinterpret_cast<GLchar*>(CSM_MALLOC(logLength));
         glGetShaderInfoLog(shaderId, logLength, &logLength, log);
-        CubismLogError("Shader compile log: %s", log);
+        CubismLogError("Shader compile log1: %s", log);
         CSM_FREE(log);
     }
 

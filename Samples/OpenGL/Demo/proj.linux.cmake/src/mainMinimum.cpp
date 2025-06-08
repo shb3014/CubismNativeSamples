@@ -114,7 +114,7 @@ void SetExecuteAbsolutePath()
 */
 static bool InitializeSystem()
 {
-    LAppPal::PrintLogLn("START");
+    LAppPal::PrintLogLn("START here");
 
     // GLFWの初期化
     if (glfwInit() == GL_FALSE)
@@ -123,6 +123,10 @@ static bool InitializeSystem()
 
         return GL_FALSE;
     }
+    LAppPal::PrintLogLn("setting hint");
+    glfwWindowHint(GLFW_CLIENT_API, GLFW_OPENGL_ES_API);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
 
     // Windowの生成
     _window = glfwCreateWindow(LAppDefine::RenderTargetWidth, LAppDefine::RenderTargetHeight, "SIMPLE_SAMPLE", NULL, NULL);

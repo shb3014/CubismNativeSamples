@@ -11,8 +11,8 @@ set(STB_PATH ${THIRD_PARTY_PATH}/stb)
 set(GLEW_PATH ${THIRD_PARTY_PATH}/glew)
 set(GLFW_PATH ${THIRD_PARTY_PATH}/glfw)
 set(RES_PATH ${SDK_ROOT_PATH}/Samples/Resources)
-set(SAMPLE_SHADER_PATH ${SDK_ROOT_PATH}/Samples/OpenGL/Shaders/StandardES3)
-set(FRAMEWORK_SHADER_PATH ${FRAMEWORK_PATH}/src/Rendering/OpenGL/Shaders/StandardES3)
+set(SAMPLE_SHADER_PATH ${SDK_ROOT_PATH}/Samples/OpenGL/Shaders/Standard)
+set(FRAMEWORK_SHADER_PATH ${FRAMEWORK_PATH}/src/Rendering/OpenGL/Shaders/Standard)
 set(COMMON_SRC_PATH ${SDK_ROOT_PATH}/Samples/Common)
 
 # Set project.
@@ -53,7 +53,7 @@ set_target_properties(Live2DCubismCore
 add_compile_definitions(
     GLEW_NO_GLU
     GLEW_EGL
-    GLEW_USE_GLES3=1
+    GLEW_USE_GLES2=1
     SYSTEM=linux-egl
 )
 
@@ -71,7 +71,6 @@ set(WAYLAND_LIBRARIES ${WAYLAND_LIBRARIES})
 
 message(STATUS "Found EGL: ${EGL_LIBRARIES}")
 message(STATUS "Found Wayland: ${WAYLAND_LIBRARIES}")
-set(GLFW_INCLUDE_ES3 ON CACHE BOOL "Use EGL instead of GLX" FORCE)
 
 # Add GLEW and GLFW with Wayland support
 set(GLFW_BUILD_WAYLAND ON CACHE BOOL "Use Wayland instead of X11" FORCE)
@@ -89,6 +88,7 @@ target_include_directories(Framework PUBLIC ${GLEW_PATH}/include)
 
 # Link libraries to framework - using keyword syntax
 target_link_libraries(Framework
+    PRIVATE
         Live2DCubismCore
         ${EGL_LIBRARIES}
         glew_s
