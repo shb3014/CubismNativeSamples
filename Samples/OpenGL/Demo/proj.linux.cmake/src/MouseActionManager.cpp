@@ -39,20 +39,20 @@ MouseActionManager::~MouseActionManager()
 {
 }
 
-void MouseActionManager::OnMouseCallBack(GLFWwindow* window, int button, int action, int modify)
+void MouseActionManager::OnMouseCallBack(int button, int action, int modify)
 {
-    if (GLFW_MOUSE_BUTTON_LEFT != button)
+    if (0 != button)
     {
         return;
     }
 
     switch (action)
     {
-    case GLFW_PRESS:
+    case 1: // press
         _captured = true;
         OnTouchesBegan(_mouseX, _mouseY);
         break;
-    case GLFW_RELEASE:
+    case 0: // release
         if (_captured)
         {
             _captured = false;
@@ -64,7 +64,7 @@ void MouseActionManager::OnMouseCallBack(GLFWwindow* window, int button, int act
     }
 }
 
-void MouseActionManager::OnMouseCallBack(GLFWwindow* window, double x, double y)
+void MouseActionManager::OnMouseCallBack(double x, double y)
 {
     _mouseX = static_cast<float>(x);
     _mouseY = static_cast<float>(y);

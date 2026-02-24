@@ -50,6 +50,7 @@ public:
     static Csm::csmFloat32 GetDeltaTime();
 
     static void UpdateTime();
+    static double GetCurrentTimeSeconds();
 
     /**
     * @brief ログを出力する

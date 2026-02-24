@@ -84,6 +84,8 @@ void LAppModel::LoadAssets(const csmChar* dir, const csmChar* fileName)
 
     CreateRenderer();
 
+    GetRenderer<Csm::Rendering::CubismRenderer_OpenGLES2>()->SetClippingMaskBufferSize(128, 128);
+
     SetupTextures();
 }
 

@@ -5,8 +5,7 @@
  * that can be found at https://www.live2d.com/eula/live2d-open-software-license-agreement_en.html.
  */
 
-#include <GL/glew.h>
-#include <GLFW/glfw3.h>
+#include <GLES3/gl3.h>
 
 #include <Utils/CubismString.hpp>
 #include <Motion/CubismMotion.hpp>
@@ -18,6 +17,7 @@
 
 #include "LAppPal.hpp"
 #include "LAppDefine.hpp"
+#include "LAppDelegate.hpp"
 #include "MouseActionManager.hpp"
 
 #include "CubismUserModelExtend.hpp"
@@ -398,11 +398,11 @@ void CubismUserModelExtend::SetupTextures()
     GetRenderer<Rendering::CubismRenderer_OpenGLES2>()->IsPremultipliedAlpha(false);
 }
 
-void CubismUserModelExtend::ModelOnUpdate(GLFWwindow* window)
+void CubismUserModelExtend::ModelOnUpdate()
 {
     int width, height;
     // ウィンドウサイズを取得
-    glfwGetWindowSize(window, &width, &height);
+    LAppDelegate::GetClientSize(width, height);
 
     Csm::CubismMatrix44 projection;
     // 念のため単位行列に初期化

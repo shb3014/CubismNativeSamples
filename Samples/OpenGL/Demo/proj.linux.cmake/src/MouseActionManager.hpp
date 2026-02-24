@@ -7,8 +7,7 @@
 
 #pragma once
 
-#include <GL/glew.h>
-#include <GLFW/glfw3.h>
+#include <GLES3/gl3.h>
 
 #include <CubismFramework.hpp>
 
@@ -42,41 +41,39 @@ public:
   virtual ~MouseActionManager(); ///< デストラクタ
 
   /**
-  * @brief   OpenGL用 glfwSetMouseButtonCallback用関数。
+  * @brief   マウスボタンコールバック用関数。
   *
-  * @param[in]       window            コールバックを呼んだWindow情報
   * @param[in]       button            ボタン種類
   * @param[in]       action            実行結果
   * @param[in]       modify
   */
-  void OnMouseCallBack(GLFWwindow* window, int button, int action, int modify);
+  void OnMouseCallBack(int button, int action, int modify);
 
   /**
-  * @brief   OpenGL用 glfwSetCursorPosCallback用関数。
+  * @brief   カーソル位置コールバック用関数。
   *
-  * @param[in]       window            コールバックを呼んだWindow情報
   * @param[in]       x                 x座標
-  * @param[in]       y                 x座標
+  * @param[in]       y                 y座標
   */
-  void OnMouseCallBack(GLFWwindow* window, double x, double y);
+  void OnMouseCallBack(double x, double y);
 };
 
 class EventHandler
 {
 public:
     /**
-    * @brief   glfwSetMouseButtonCallback用コールバック関数。
+    * @brief   マウスボタンコールバック関数。
     */
-    static void OnMouseCallBack(GLFWwindow* window, int button, int action, int modify)
+    static void OnMouseCallBack(int button, int action, int modify)
     {
-        MouseActionManager::GetInstance()->OnMouseCallBack(window, button, action, modify);
+        MouseActionManager::GetInstance()->OnMouseCallBack(button, action, modify);
     }
 
     /**
-    * @brief   glfwSetCursorPosCallback用コールバック関数。
+    * @brief   カーソル位置コールバック関数。
     */
-    static void OnMouseCallBack(GLFWwindow* window, double x, double y)
+    static void OnMouseCallBack(double x, double y)
     {
-        MouseActionManager::GetInstance()->OnMouseCallBack(window, x, y);
+        MouseActionManager::GetInstance()->OnMouseCallBack(x, y);
     }
 };

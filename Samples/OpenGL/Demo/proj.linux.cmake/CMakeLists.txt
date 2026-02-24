@@ -1,130 +1,81 @@
 cmake_minimum_required(VERSION 3.16)
 
-# Set app name.
 set(APP_NAME Demo)
-# Set directory paths.
 set(SDK_ROOT_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../../../..)
 set(CORE_PATH ${SDK_ROOT_PATH}/Core)
 set(FRAMEWORK_PATH ${SDK_ROOT_PATH}/Framework)
 set(THIRD_PARTY_PATH ${SDK_ROOT_PATH}/Samples/OpenGL/thirdParty)
 set(STB_PATH ${THIRD_PARTY_PATH}/stb)
-set(GLEW_PATH ${THIRD_PARTY_PATH}/glew)
-set(GLFW_PATH ${THIRD_PARTY_PATH}/glfw)
 set(RES_PATH ${SDK_ROOT_PATH}/Samples/Resources)
 set(SAMPLE_SHADER_PATH ${SDK_ROOT_PATH}/Samples/OpenGL/Shaders/StandardES3)
 set(FRAMEWORK_SHADER_PATH ${FRAMEWORK_PATH}/src/Rendering/OpenGL/Shaders/StandardES3)
 set(COMMON_SRC_PATH ${SDK_ROOT_PATH}/Samples/Common)
 
-# Set project.
 project(${APP_NAME})
 
-# Define output directory.
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/bin/${APP_NAME})
-# Set configuration (Release and Debug only).
 set(CMAKE_CONFIGURATION_TYPES Debug Release
   CACHE STRING "Configurations" FORCE
 )
-# Suppress generation of ZERO_CHECK project.
 set(CMAKE_SUPPRESS_REGENERATION ON)
 
-# Suppress GLEW and GLFW process.
-set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
-set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
-set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
-set(GLFW_INSTALL OFF CACHE BOOL "" FORCE)
-set(BUILD_UTILS OFF CACHE BOOL "" FORCE)
-
-# Specify version of compiler.
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-# Add Cubism Core.
-# Import as static library.
+# Cubism Core (ARM64 static lib)
 add_library(Live2DCubismCore STATIC IMPORTED)
-# Find library path.
 set_target_properties(Live2DCubismCore
   PROPERTIES
     IMPORTED_LOCATION ${CORE_PATH}/lib/linux/arm64/libLive2DCubismCore.a
     INTERFACE_INCLUDE_DIRECTORIES ${CORE_PATH}/include
 )
 
-# GLEW configuration - must come before adding GLEW subdirectory
-add_compile_definitions(
-    GLEW_NO_GLU
-    GLEW_EGL
-    GLEW_USE_GLES3=1
-    SYSTEM=linux-egl
-)
-
-# Find OpenGL and EGL libraries
-find_package(OpenGL REQUIRED)
-
-# Robust EGL/GLES/Wayland detection
+# Find EGL/GLES and DRM/GBM
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(EGL REQUIRED egl glesv2)
-pkg_check_modules(WAYLAND REQUIRED wayland-client wayland-egl)
-
-set(EGL_INCLUDE_DIRS ${EGL_INCLUDE_DIRS})
-set(EGL_LIBRARIES ${EGL_LIBRARIES})
-set(WAYLAND_LIBRARIES ${WAYLAND_LIBRARIES})
+pkg_check_modules(DRM REQUIRED libdrm gbm)
 
 message(STATUS "Found EGL: ${EGL_LIBRARIES}")
-message(STATUS "Found Wayland: ${WAYLAND_LIBRARIES}")
-set(GLFW_INCLUDE_ES3 ON CACHE BOOL "Use EGL instead of GLX" FORCE)
+message(STATUS "Found DRM/GBM: ${DRM_LIBRARIES}")
 
-# Add GLEW and GLFW with Wayland support
-set(GLFW_BUILD_WAYLAND ON CACHE BOOL "Use Wayland instead of X11" FORCE)
-add_subdirectory(${GLEW_PATH}/build/cmake ${CMAKE_CURRENT_BINARY_DIR}/glew)
-add_subdirectory(${GLFW_PATH} ${CMAKE_CURRENT_BINARY_DIR}/glfw)
-
-# Specify Cubism Framework rendering
+# Cubism Framework
 set(FRAMEWORK_SOURCE OpenGL)
-# Add Cubism Native Framework
 add_subdirectory(${FRAMEWORK_PATH} ${CMAKE_CURRENT_BINARY_DIR}/Framework)
-# Add rendering definition to framework
-target_compile_definitions(Framework PUBLIC CSM_TARGET_LINUX_GL)
-# Add include path of GLEW to framework
-target_include_directories(Framework PUBLIC ${GLEW_PATH}/include)
-
-# Link libraries to framework - using keyword syntax
+target_compile_definitions(Framework PUBLIC CSM_TARGET_HARMONYOS_ES3)
+target_include_directories(Framework PUBLIC ${EGL_INCLUDE_DIRS})
 target_link_libraries(Framework
-        Live2DCubismCore
-        ${EGL_LIBRARIES}
-        glew_s
-        ${OPENGL_LIBRARIES}
-        ${WAYLAND_LIBRARIES}
-        dl
+    Live2DCubismCore
+    ${EGL_LIBRARIES}
+    dl
 )
 
-# Make executable app
+# Demo executable
 add_executable(${APP_NAME})
-# Add common source files
 add_subdirectory(${COMMON_SRC_PATH} ${CMAKE_CURRENT_BINARY_DIR}/src/Common)
-# Add source files
 add_subdirectory(src)
 
-# Link libraries to app - using consistent keyword syntax
 target_link_libraries(${APP_NAME}
     PRIVATE
         Framework
         ${EGL_LIBRARIES}
-        glfw
-        ${WAYLAND_LIBRARIES}
+        ${DRM_LIBRARIES}
         pthread
         dl
         m
 )
 
-# For ARM64 systems, ensure proper linking behavior
+target_include_directories(${APP_NAME} PRIVATE
+    ${STB_PATH}
+    ${EGL_INCLUDE_DIRS}
+    ${DRM_INCLUDE_DIRS}
+)
+
 if(CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64")
     target_link_options(${APP_NAME} PRIVATE "-Wl,--no-as-needed")
 endif()
 
-# Specify include directories
-target_include_directories(${APP_NAME} PRIVATE ${STB_PATH})
-
-# Copy resource directory to build directory
+# Copy resources
 add_custom_command(
     TARGET ${APP_NAME}
     POST_BUILD
@@ -132,12 +83,3 @@ add_custom_command(
     COMMAND ${CMAKE_COMMAND} -E copy_directory ${SAMPLE_SHADER_PATH} $<TARGET_FILE_DIR:${APP_NAME}>/SampleShaders
     COMMAND ${CMAKE_COMMAND} -E copy_directory ${FRAMEWORK_SHADER_PATH} $<TARGET_FILE_DIR:${APP_NAME}>/FrameworkShaders
 )
-
-# Debug output
-message(STATUS "Final configuration:")
-message(STATUS "  EGL_INCLUDE_DIRS: ${EGL_INCLUDE_DIRS}")
-message(STATUS "  EGL_LIBRARIES: ${EGL_LIBRARIES}")
-message(STATUS "  WAYLAND_LIBRARIES: ${WAYLAND_LIBRARIES}")
-message(STATUS "  OPENGL_LIBRARIES: ${OPENGL_LIBRARIES}")
-get_target_property(LINK_LIBS ${APP_NAME} LINK_LIBRARIES)
-message(STATUS "  ${APP_NAME} link libraries: ${LINK_LIBS}")

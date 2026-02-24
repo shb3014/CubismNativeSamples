@@ -35,6 +35,8 @@ else ()
       ${CMAKE_CURRENT_SOURCE_DIR}/LAppView.cpp
       ${CMAKE_CURRENT_SOURCE_DIR}/LAppView.hpp
       ${CMAKE_CURRENT_SOURCE_DIR}/main.cpp
+      ${CMAKE_CURRENT_SOURCE_DIR}/drm_egl_context.cpp
+      ${CMAKE_CURRENT_SOURCE_DIR}/drm_egl_context.h
   )
 endif ()
 

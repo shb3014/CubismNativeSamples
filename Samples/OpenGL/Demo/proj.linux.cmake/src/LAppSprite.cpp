@@ -37,7 +37,7 @@ void LAppSprite::Render() const
 {
     // 画面サイズを取得する
     int maxWidth, maxHeight;
-    glfwGetWindowSize(LAppDelegate::GetInstance()->GetWindow(), &maxWidth, &maxHeight);
+    LAppDelegate::GetClientSize(maxWidth, maxHeight);
 
     if(maxWidth==0 || maxHeight==0)
     {
@@ -86,7 +86,7 @@ void LAppSprite::RenderImmidiate(GLuint textureId, const GLfloat uvVertex[8]) co
 {
     // 画面サイズを取得する
     int maxWidth, maxHeight;
-    glfwGetWindowSize(LAppDelegate::GetInstance()->GetWindow(), &maxWidth, &maxHeight);
+    LAppDelegate::GetClientSize(maxWidth, maxHeight);
 
     if(maxWidth==0 || maxHeight==0)
     {
@@ -124,7 +124,7 @@ bool LAppSprite::IsHit(float pointX, float pointY) const
 {
     // 画面サイズを取得する
     int maxWidth, maxHeight;
-    glfwGetWindowSize(LAppDelegate::GetInstance()->GetWindow(), &maxWidth, &maxHeight);
+    LAppDelegate::GetClientSize(maxWidth, maxHeight);
 
     if(maxWidth==0 || maxHeight==0)
     {

@@ -10,8 +10,9 @@
 #include <sstream>
 #include <unistd.h>
 #include <libgen.h>
-#include <GL/glew.h>
-#include <GLFW/glfw3.h>
+#include <signal.h>
+#include <GLES3/gl3.h>
+#include "drm_egl_context.h"
 #include "LAppView.hpp"
 #include "LAppPal.hpp"
 #include "LAppDefine.hpp"
@@ -24,6 +25,9 @@ using namespace LAppDefine;
 
 namespace {
     LAppDelegate* s_instance = NULL;
+    volatile sig_atomic_t g_running = 1;
+
+    void signalHandler(int) { g_running = 0; }
 }
 
 LAppDelegate* LAppDelegate::GetInstance()
@@ -32,7 +36,6 @@ LAppDelegate* LAppDelegate::GetInstance()
     {
         s_instance = new LAppDelegate();
     }
-
     return s_instance;
 }
 
@@ -42,7 +45,6 @@ void LAppDelegate::ReleaseInstance()
     {
         delete s_instance;
     }
-
     s_instance = NULL;
 }
 
@@ -50,148 +52,137 @@ bool LAppDelegate::Initialize()
 {
     if (DebugLogEnable)
     {
-        LAppPal::PrintLogLn("START1");
+        LAppPal::PrintLogLn("START (GBM/DRM direct)");
     }
 
-    // GLFWの初期化
-    if (glfwInit() == GL_FALSE)
+    signal(SIGINT, signalHandler);
+    signal(SIGTERM, signalHandler);
+
+    _drmContext = new rive_rk3566::DRMEGLContext();
+    if (!_drmContext->initialize())
     {
-        if (DebugLogEnable)
-        {
-            LAppPal::PrintLogLn("Can't initilize GLFW");
-        }
-        return GL_FALSE;
-    }
-    LAppPal::PrintLogLn("setting hint");
-    glfwWindowHint(GLFW_CLIENT_API, GLFW_OPENGL_ES_API);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 1);
-
-    // Windowの生成_
-    _window = glfwCreateWindow(RenderTargetWidth, RenderTargetHeight, "SAMPLE", NULL, NULL);
-    if (_window == NULL)
-    {
-        if (DebugLogEnable)
-        {
-            LAppPal::PrintLogLn("Can't create GLFW window.");
-        }
-        glfwTerminate();
-        return GL_FALSE;
+        LAppPal::PrintLogLn("Failed to init DRM/EGL: %s", _drmContext->lastError().c_str());
+        return false;
     }
 
-    // Windowのコンテキストをカレントに設定
-    glfwMakeContextCurrent(_window);
-    glfwSwapInterval(1);
+    _windowWidth = 500;
+    _windowHeight = 500;
+    _displayWidth = _drmContext->width();
+    _displayHeight = _drmContext->height();
+    LAppPal::PrintLogLn("Native display: %dx%d, render viewport: %dx%d",
+        _displayWidth, _displayHeight, _windowWidth, _windowHeight);
 
-    if (glewInit() != GLEW_OK) {
-        if (DebugLogEnable)
-        {
-            LAppPal::PrintLogLn("Can't initilize glew.");
-        }
-        glfwTerminate();
-        return GL_FALSE;
-    }
-
-    //テクスチャサンプリング設定
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-
-    //透過設定
     glEnable(GL_BLEND);
     glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
-
-    //コールバック関数の登録
-    glfwSetMouseButtonCallback(_window, EventHandler::OnMouseCallBack);
-    glfwSetCursorPosCallback(_window, EventHandler::OnMouseCallBack);
-
-    // ウィンドウサイズ記憶
-    int width, height;
-    glfwGetWindowSize(LAppDelegate::GetInstance()->GetWindow(), &width, &height);
-    _windowWidth = width;
-    _windowHeight = height;
     glViewport(0, 0, _windowWidth, _windowHeight);
 
-    // Cubism3の初期化
     InitializeCubism();
-
     SetExecuteAbsolutePath();
 
-    //load model
     LAppLive2DManager::GetInstance();
 
-    //AppViewの初期化
-    _view->Initialize(width, height);
+    _view->Initialize(_windowWidth, _windowHeight);
     _view->InitializeSprite();
 
-    return GL_TRUE;
+    return true;
 }
 
 void LAppDelegate::Release()
 {
-    // Windowの削除
-    glfwDestroyWindow(_window);
-
-    glfwTerminate();
-
     delete _textureManager;
     delete _view;
 
-    // リソースを解放
     LAppLive2DManager::ReleaseInstance();
-
-    //Cubism3の解放
     CubismFramework::Dispose();
+
+    if (_drmContext)
+    {
+        delete _drmContext;
+        _drmContext = nullptr;
+    }
 }
 
 void LAppDelegate::Run()
 {
-    //メインループ
-    while (glfwWindowShouldClose(_window) == GL_FALSE && !_isEnd)
+    int frameCount = 0;
+    double fpsTimer = LAppPal::GetCurrentTimeSeconds();
+    double totalFrameTime = 0.0;
+    double minFrameTime = 1e9;
+    double maxFrameTime = 0.0;
+
+    double totalClear = 0, totalCpu = 0, totalSwap = 0;
+
+    while (g_running && !_isEnd)
     {
-        int width, height;
-        glfwGetWindowSize(LAppDelegate::GetInstance()->GetWindow(), &width, &height);
-        if((_windowWidth!=width || _windowHeight!=height) && width>0 && height>0)
-        {
-            _view->Initialize(width, height);
-            _view->ResizeSprite();
+        double t0 = LAppPal::GetCurrentTimeSeconds();
 
-            _windowWidth = width;
-            _windowHeight = height;
-        }
-        glViewport(0, 0, _windowWidth, _windowHeight);
-
-        // 時間更新
-        LAppPal::UpdateTime();
-
-        // 画面の初期化
+        // Clear full screen
+        glViewport(0, 0, _displayWidth, _displayHeight);
         glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        glClearDepth(1.0);
+        glClear(GL_COLOR_BUFFER_BIT);
 
-        //描画更新
+        // Render Live2D in centered viewport
+        int offsetX = (_displayWidth - _windowWidth) / 2;
+        int offsetY = (_displayHeight - _windowHeight) / 2;
+        glViewport(offsetX, offsetY, _windowWidth, _windowHeight);
+
+        double t1 = LAppPal::GetCurrentTimeSeconds();
+
+        LAppPal::UpdateTime();
         _view->Render();
 
-        // バッファの入れ替え
-        glfwSwapBuffers(_window);
+        double t2 = LAppPal::GetCurrentTimeSeconds();
 
-        // Poll for and process events
-        glfwPollEvents();
+        _drmContext->swapBuffers();
+
+        double t3 = LAppPal::GetCurrentTimeSeconds();
+
+        double clearMs = (t1 - t0) * 1000.0;
+        double cpuMs = (t2 - t1) * 1000.0;
+        double swapMs = (t3 - t2) * 1000.0;
+        double frameTime = (t3 - t0) * 1000.0;
+
+        totalClear += clearMs;
+        totalCpu += cpuMs;
+        totalSwap += swapMs;
+        totalFrameTime += frameTime;
+        if (frameTime < minFrameTime) minFrameTime = frameTime;
+        if (frameTime > maxFrameTime) maxFrameTime = frameTime;
+        frameCount++;
+
+        double elapsed = t3 - fpsTimer;
+        if (elapsed >= 1.0)
+        {
+            double avgFps = frameCount / elapsed;
+            LAppPal::PrintLogLn("[PERF] FPS: %.1f | clear: %.2f | cpu: %.2f | swap: %.2f | total: %.2f ms | frames: %d",
+                avgFps, totalClear / frameCount, totalCpu / frameCount,
+                totalSwap / frameCount, totalFrameTime / frameCount, frameCount);
+            frameCount = 0;
+            totalFrameTime = 0.0;
+            totalClear = totalCpu = totalSwap = 0.0;
+            minFrameTime = 1e9;
+            maxFrameTime = 0.0;
+            fpsTimer = t3;
+        }
     }
 
     Release();
-
     LAppDelegate::ReleaseInstance();
 }
 
 LAppDelegate::LAppDelegate():
     _cubismOption(),
-    _window(NULL),
+    _drmContext(nullptr),
     _captured(false),
     _mouseX(0.0f),
     _mouseY(0.0f),
     _isEnd(false),
     _windowWidth(0),
-    _windowHeight(0)
+    _windowHeight(0),
+    _displayWidth(0),
+    _displayHeight(0)
 {
     _executeAbsolutePath = "";
     _view = new LAppView();
@@ -200,85 +191,35 @@ LAppDelegate::LAppDelegate():
 
 LAppDelegate::~LAppDelegate()
 {
-
 }
 
 void LAppDelegate::InitializeCubism()
 {
-    //setup cubism
     _cubismOption.LogFunction = LAppPal::PrintMessage;
     _cubismOption.LoggingLevel = LAppDefine::CubismLoggingLevel;
     _cubismOption.LoadFileFunction = LAppPal::LoadFileAsBytes;
     _cubismOption.ReleaseBytesFunction = LAppPal::ReleaseBytes;
     Csm::CubismFramework::StartUp(&_cubismAllocator, &_cubismOption);
-
-    //Initialize cubism
     CubismFramework::Initialize();
 
-    //default proj
     CubismMatrix44 projection;
-
     LAppPal::UpdateTime();
-}
-
-void LAppDelegate::OnMouseCallBack(GLFWwindow* window, int button, int action, int modify)
-{
-    if (_view == NULL)
-    {
-        return;
-    }
-    if (GLFW_MOUSE_BUTTON_LEFT != button)
-    {
-        return;
-    }
-
-    if (GLFW_PRESS == action)
-    {
-        _captured = true;
-        _view->OnTouchesBegan(_mouseX, _mouseY);
-    }
-    else if (GLFW_RELEASE == action)
-    {
-        if (_captured)
-        {
-            _captured = false;
-            _view->OnTouchesEnded(_mouseX, _mouseY);
-        }
-    }
-}
-
-void LAppDelegate::OnMouseCallBack(GLFWwindow* window, double x, double y)
-{
-    _mouseX = static_cast<float>(x);
-    _mouseY = static_cast<float>(y);
-
-    if (!_captured)
-    {
-        return;
-    }
-    if (_view == NULL)
-    {
-        return;
-    }
-
-    _view->OnTouchesMoved(_mouseX, _mouseY);
 }
 
 void LAppDelegate::GetClientSize(int& rWidth, int& rHeight)
 {
-    glfwGetWindowSize(LAppDelegate::GetInstance()->GetWindow(), &rWidth, &rHeight);
+    rWidth = GetInstance()->_windowWidth;
+    rHeight = GetInstance()->_windowHeight;
 }
 
 void LAppDelegate::SetExecuteAbsolutePath()
 {
     char path[1024];
     ssize_t len = readlink("/proc/self/exe", path, 1024 - 1);
-
     if (len != -1)
     {
         path[len] = '\0';
     }
-
     this->_executeAbsolutePath = dirname(path);
     this->_executeAbsolutePath += "/";
 }

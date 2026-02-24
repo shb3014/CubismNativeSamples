@@ -10,10 +10,9 @@
 #include <stdlib.h>
 #include <stdarg.h>
 #include <sys/stat.h>
+#include <time.h>
 #include <iostream>
 #include <fstream>
-#include <GL/glew.h>
-#include <GLFW/glfw3.h>
 #include <Model/CubismMoc.hpp>
 #include "LAppDefine.hpp"
 
@@ -26,9 +25,15 @@ double LAppPal::s_currentFrame = 0.0;
 double LAppPal::s_lastFrame = 0.0;
 double LAppPal::s_deltaTime = 0.0;
 
+double LAppPal::GetCurrentTimeSeconds()
+{
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    return ts.tv_sec + ts.tv_nsec / 1.0e9;
+}
+
 csmByte* LAppPal::LoadFileAsBytes(const string filePath, csmSizeInt* outSize)
 {
-    //filePath;//
     const char* path = filePath.c_str();
 
     int size = 0;
@@ -86,7 +91,7 @@ csmFloat32  LAppPal::GetDeltaTime()
 
 void LAppPal::UpdateTime()
 {
-    s_currentFrame = glfwGetTime();
+    s_currentFrame = GetCurrentTimeSeconds();
     s_deltaTime = s_currentFrame - s_lastFrame;
     s_lastFrame = s_currentFrame;
 }
@@ -96,7 +101,7 @@ void LAppPal::PrintLog(const csmChar* format, ...)
     va_list args;
     csmChar buf[256];
     va_start(args, format);
-    vsnprintf(buf, sizeof(buf), format, args); // 標準出力でレンダリング
+    vsnprintf(buf, sizeof(buf), format, args);
     std::cout << buf;
     va_end(args);
 }
@@ -106,7 +111,7 @@ void LAppPal::PrintLogLn(const csmChar* format, ...)
     va_list args;
     csmChar buf[256];
     va_start(args, format);
-    vsnprintf(buf, sizeof(buf), format, args); // 標準出力でレンダリング
+    vsnprintf(buf, sizeof(buf), format, args);
     std::cout << buf << std::endl;
     va_end(args);
 }

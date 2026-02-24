@@ -80,11 +80,6 @@ void LAppView::Initialize(int width, int height)
 
 void LAppView::Render()
 {
-    _back->Render();
-    _gear->Render();
-    _power->Render();
-
-
     LAppLive2DManager* Live2DManager = LAppLive2DManager::GetInstance();
 
     Live2DManager->SetViewMatrix(_viewMatrix);
@@ -122,7 +117,7 @@ void LAppView::InitializeSprite()
     GLuint programId = _spriteShader->GetShaderId();
 
     int width, height;
-    glfwGetWindowSize(LAppDelegate::GetInstance()->GetWindow(), &width, &height);
+    LAppDelegate::GetClientSize(width, height);
 
     LAppTextureManager* textureManager = LAppDelegate::GetInstance()->GetTextureManager();
     const string resourcesPath = LAppDelegate::GetInstance()->GetExecuteAbsolutePath() + ResourcesPath;
@@ -224,7 +219,7 @@ void LAppView::PreModelDraw(LAppModel &refModel)
         if (!useTarget->IsValid())
         {// 描画ターゲット内部未作成の場合はここで作成
             int bufWidth, bufHeight;
-            glfwGetFramebufferSize(LAppDelegate::GetInstance()->GetWindow(), &bufWidth, &bufHeight);
+            LAppDelegate::GetClientSize(bufWidth, bufHeight);
 
             if(bufWidth!=0 && bufHeight!=0)
             {
@@ -309,7 +304,7 @@ void LAppView::ResizeSprite()
 
     // 描画領域サイズ
     int width, height;
-    glfwGetWindowSize(LAppDelegate::GetInstance()->GetWindow(), &width, &height);
+    LAppDelegate::GetClientSize(width, height);
 
     float x = 0.0f;
     float y = 0.0f;

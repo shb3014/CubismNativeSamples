@@ -13,8 +13,7 @@
 #include <unistd.h>
 #include <libgen.h>
 #include <limits.h>
-#include <GL/glew.h>
-#include <GLFW/glfw3.h>
+#include <GLES3/gl3.h>
 #include <Rendering/CubismRenderer.hpp>
 #include "LAppPal.hpp"
 #include "LAppDefine.hpp"
@@ -197,7 +196,7 @@ void LAppLive2DManager::OnTap(csmFloat32 x, csmFloat32 y)
 void LAppLive2DManager::OnUpdate() const
 {
     int width, height;
-    glfwGetWindowSize(LAppDelegate::GetInstance()->GetWindow(), &width, &height);
+    LAppDelegate::GetClientSize(width, height);
 
     csmUint32 modelCount = _models.GetSize();
     for (csmUint32 i = 0; i < modelCount; ++i)

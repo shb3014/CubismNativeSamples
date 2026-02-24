@@ -7,8 +7,7 @@
 
 #pragma once
 
-#include <GL/glew.h>
-#include <GLFW/glfw3.h>
+#include <GLES3/gl3.h>
 #include <Math/CubismMatrix44.hpp>
 #include <Math/CubismViewMatrix.hpp>
 #include "CubismFramework.hpp"

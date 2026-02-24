@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Copyright(c) Live2D Inc. All rights reserved.
  *
  * Use of this source code is governed by the Live2D Open Software license
@@ -40,7 +40,7 @@ public:
     *
     * モデルの状態や描画を更新する
     */
-    void ModelOnUpdate(GLFWwindow* window);
+    void ModelOnUpdate();
 
 private:
     /**
